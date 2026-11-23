@@ -15,6 +15,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "permissions.h"
+#include "audit.h"
 #include "fcntl.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
@@ -137,6 +138,11 @@ sys_link(void)
   }
 
   ilock(ip);
+  if (check_access(ip, PERM_R, AUDIT_LINK) < 0) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
   if (ip->type == T_DIR) {
     iunlockput(ip);
     end_op();
@@ -156,6 +162,11 @@ sys_link(void)
   if ((dp = nameiparent(new, name)) == 0)
     goto bad;
   ilock(dp);
+  if (check_access(dp, PERM_W, AUDIT_LINK) < 0 ||
+      check_access(dp, PERM_X, AUDIT_LINK) < 0) {
+    iunlockput(dp);
+    goto bad;
+  }
   // dp may have been unlinked while we resolved it; linking into an
   // orphaned directory leaks ip (itrunc discards the record without
   // dropping ip->nlink).  create() has the same guard.
@@ -219,6 +230,9 @@ sys_unlink(void)
   ilock(dp);
 
   // Cannot unlink "." or "..".
+  if (check_access(dp, PERM_W, AUDIT_DELETE) < 0 ||
+      check_access(dp, PERM_X, AUDIT_DELETE) < 0)
+    goto bad;
   if (namecmp(name, ".") == 0 || namecmp(name, "..") == 0)
     goto bad;
 
@@ -229,6 +243,11 @@ sys_unlink(void)
   if (ip->nlink < 1)
     panic("unlink: nlink < 1");
   if (ip->type == T_DIR && !isdirempty(ip)) {
+    iunlockput(ip);
+    goto bad;
+  }
+  if (get_current_uid() != ROOT_UID && get_current_uid() != ip->uid) {
+    audit_denied(get_current_uid(), myproc()->pid, AUDIT_DELETE, ip->inum);
     iunlockput(ip);
     goto bad;
   }
@@ -271,9 +290,13 @@ create(char *path, short type, short major, short minor)
     iunlockput(dp);
     return 0;
   }
-
   // a new directory's ".." would push dp->nlink past its maximum
   if (type == T_DIR && dp->nlink >= NLINK_MAX) {
+    iunlockput(dp);
+    return 0;
+  }
+
+  if (check_access(dp, PERM_X, AUDIT_SEARCH) < 0) {
     iunlockput(dp);
     return 0;
   }
@@ -284,6 +307,11 @@ create(char *path, short type, short major, short minor)
     if (type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE))
       return ip;
     iunlockput(ip);
+    return 0;
+  }
+
+  if (check_access(dp, PERM_W, AUDIT_CREATE) < 0) {
+    iunlockput(dp);
     return 0;
   }
 
@@ -366,6 +394,21 @@ sys_open(void)
     return -1;
   }
 
+  // Only the trusted manager may open the boot console without file rights.
+  // Inherited console descriptors still pass the session checks on every I/O.
+  int boot_console = myproc()->session_manager && omode == O_RDWR &&
+                     strncmp(path, "/console", sizeof("/console")) == 0 &&
+                     ip->type == T_DEVICE && ip->major == CONSOLE &&
+                     ip->minor == 0 && ip->uid == ROOT_UID;
+  if (!boot_console &&
+      ((!(omode & O_WRONLY) && check_access(ip, PERM_R, AUDIT_READ) < 0) ||
+       ((omode & (O_WRONLY | O_RDWR | O_TRUNC)) &&
+        check_access(ip, PERM_W, AUDIT_WRITE) < 0))) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
   if ((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0) {
     if (f)
       fileclose(f);
@@ -418,11 +461,18 @@ sys_mknod(void)
   char path[MAXPATH];
   int major, minor;
 
-  begin_op();
+  if (get_current_uid() != ROOT_UID) {
+    audit_denied(get_current_uid(), myproc()->pid, AUDIT_MKNOD, 0);
+    return -1;
+  }
   argint(1, &major);
   argint(2, &minor);
-  if ((argstr(0, path, MAXPATH)) < 0 ||
-      (ip = create(path, T_DEVICE, major, minor)) == 0) {
+  if (major < 0 || major >= NDEV || minor < 0 || minor > 32767 ||
+      argstr(0, path, MAXPATH) < 0)
+    return -1;
+
+  begin_op();
+  if ((ip = create(path, T_DEVICE, major, minor)) == 0) {
     end_op();
     return -1;
   }
@@ -449,11 +499,40 @@ sys_chdir(void)
     end_op();
     return -1;
   }
+  if (check_access(ip, PERM_X, AUDIT_SEARCH) < 0) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
   iunlock(ip);
   iput(p->cwd);
   end_op();
   p->cwd = ip;
   return 0;
+}
+
+// Root-only audit query; events are copied oldest-first and contain no data
+// supplied by the user, only denied operation metadata from the kernel.
+uint64
+sys_auditread(void)
+{
+  struct audit_event events[AUDIT_CAPACITY];
+  uint64 destination;
+  int capacity, count;
+
+  argaddr(0, &destination);
+  argint(1, &capacity);
+  if (get_current_uid() != ROOT_UID) {
+    audit_denied(get_current_uid(), myproc()->pid, AUDIT_QUERY, 0);
+    return -1;
+  }
+  if (capacity < 0 || capacity > AUDIT_CAPACITY)
+    return -1;
+  count = audit_read(events, capacity);
+  if (count < 0 || copyout(myproc()->pagetable, myproc()->sz, destination,
+                           (char *)events, count * sizeof(events[0])) < 0)
+    return -1;
+  return count;
 }
 
 uint64
@@ -540,7 +619,7 @@ sys_chmod(void)
   struct inode *ip;
 
   argint(1, &mode);
-  if (argstr(0, path, MAXPATH) < 0 || !valid_file_mode(mode) || uid < 0)
+  if (argstr(0, path, MAXPATH) < 0 || !valid_file_mode(mode))
     return -1;
   begin_op();
   if ((ip = namei(path)) == 0) {
@@ -548,7 +627,8 @@ sys_chmod(void)
     return -1;
   }
   ilock(ip);
-  if (uid != ROOT_UID && uid != ip->uid) {
+  if (uid < 0 || (uid != ROOT_UID && uid != ip->uid)) {
+    audit_denied(uid, myproc()->pid, AUDIT_CHMOD, ip->inum);
     iunlockput(ip);
     end_op();
     return -1;

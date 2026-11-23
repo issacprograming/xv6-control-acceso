@@ -1,3 +1,5 @@
+#include "kernel/audit.h"
+
 #define SBRK_ERROR ((char *)-1)
 
 struct stat;
@@ -54,3 +56,5 @@ void *malloc(uint);
 void free(void *);
 
 int chmod(const char *, int);
+
+int auditread(struct audit_event *, int);

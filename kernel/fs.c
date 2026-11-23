@@ -21,6 +21,7 @@
 #include "buf.h"
 #include "file.h"
 #include "permissions.h"
+#include "audit.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 // there should be one superblock per disk device, but we run with
@@ -705,11 +706,15 @@ static struct inode *
 namex(char *path, int nameiparent, char *name)
 {
   struct inode *ip, *next;
+  // Trusted init needs one lookup before any user has authenticated.
+  struct proc *p = myproc();
+  int boot_console = !nameiparent && p && p->session_manager &&
+                     strncmp(path, "/console", sizeof("/console")) == 0;
 
   if (*path == '/')
     ip = iget(ROOTDEV, ROOTINO);
   else
-    ip = idup(myproc()->cwd);
+    ip = idup(p->cwd);
 
   while ((path = skipelem(path, name)) != 0) {
     ilock(ip);
@@ -718,6 +723,10 @@ namex(char *path, int nameiparent, char *name)
       return 0;
     }
     if (ip->nlink == 0) {
+      iunlockput(ip);
+      return 0;
+    }
+    if (!boot_console && check_access(ip, PERM_X, AUDIT_SEARCH) < 0) {
       iunlockput(ip);
       return 0;
     }

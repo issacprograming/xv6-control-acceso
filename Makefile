@@ -25,6 +25,8 @@ OBJS = \
   $K/sleeplock.o \
   $K/file.o \
   $K/pipe.o \
+  $K/access.o \
+  $K/audit.o \
   $K/exec.o \
   $K/session_programs.o \
   $K/sysfile.o \
@@ -132,6 +134,7 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h $K/stat.h $K/permissions.h $K/uid.h
 .PRECIOUS: %.o
 
 UPROGS=\
+	$U/_audit\
 	$U/_permtest\
 	$U/_chmod\
 	$U/_cat\

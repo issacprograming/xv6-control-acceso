@@ -8,6 +8,12 @@
 #include "elf.h"
 #include "auth.h"
 #include "uid.h"
+#include "stat.h"
+#include "fs.h"
+#include "sleeplock.h"
+#include "file.h"
+#include "permissions.h"
+#include "audit.h"
 
 struct execimage {
   const char *name;
@@ -82,6 +88,8 @@ loadexec(char *path, char **argv, const struct execimage *image)
       return -1;
     }
     ilock(ip);
+    if (ip->type != T_FILE || check_access(ip, PERM_X, AUDIT_EXEC) < 0)
+      goto bad;
   }
 
   // Read the ELF header.
@@ -206,7 +214,8 @@ kexec(char *path, char **argv)
   struct proc *p = myproc();
   const struct execimage *image = 0;
 
-  if (p->session_manager || p->login_state == LOGIN_PENDING)
+  if (p->uid == UID_UNAUTH || p->session_manager ||
+      p->login_state == LOGIN_PENDING)
     return -1;
 
   if (p->login_state == LOGIN_VERIFIED && strncmp(path, "/sh", 4) != 0)

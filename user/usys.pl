@@ -48,3 +48,4 @@ entry("startsession");
 entry("readsecret");
 entry("authenticate");
 entry("chmod");
+entry("auditread");

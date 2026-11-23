@@ -135,3 +135,8 @@ chmod:
  li a7, SYS_chmod
  ecall
  ret
+.global auditread
+auditread:
+ li a7, SYS_auditread
+ ecall
+ ret

@@ -26,3 +26,4 @@
 #define SYS_readsecret 25
 #define SYS_authenticate 26
 #define SYS_chmod 27
+#define SYS_auditread 28

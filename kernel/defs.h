@@ -1,5 +1,6 @@
 // clang-format off
 struct buf;
+struct audit_event;
 struct context;
 struct file;
 struct inode;
@@ -50,6 +51,10 @@ void            iput(struct inode*);
 void            iunlock(struct inode*);
 void            iunlockput(struct inode*);
 void            iupdate(struct inode*);
+int             check_access(struct inode*, int, int);
+void            auditinit(void);
+void            audit_denied(int, int, int, int);
+int             audit_read(struct audit_event*, int);
 int             namecmp(const char*, const char*);
 struct inode*   namei(char*);
 struct inode*   nameiparent(char*, char*);
