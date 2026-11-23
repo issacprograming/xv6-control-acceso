@@ -1,0 +1,2 @@
+# Preserve literal QEMU console prompts in captured execution logs.
+evidencias/**/*.txt -whitespace

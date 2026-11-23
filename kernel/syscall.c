@@ -107,6 +107,7 @@ extern uint64 sys_getuid(void);
 extern uint64 sys_startsession(void);
 extern uint64 sys_readsecret(void);
 extern uint64 sys_authenticate(void);
+extern uint64 sys_chmod(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -138,6 +139,7 @@ static uint64 (*syscalls[])(void) = {
   [SYS_startsession] = sys_startsession,
   [SYS_readsecret] = sys_readsecret,
   [SYS_authenticate] = sys_authenticate,
+  [SYS_chmod]   = sys_chmod,
   // clang-format on
 };
 

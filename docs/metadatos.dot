@@ -1,0 +1,24 @@
+digraph Metadatos {
+  graph [rankdir=TB, bgcolor="white", pad=0.2, nodesep=0.4, ranksep=0.5, dpi=140];
+  node [shape=box, style="rounded", fontname="DejaVu Sans", fontsize=12, margin="0.18,0.12", color="#222222"];
+  edge [fontname="DejaVu Sans", fontsize=10, color="#444444"];
+  proc [label="Proceso\nUID de la identidad"];
+  crear [label="ialloc\nUID creador y modo inicial"];
+  chmod [label="sys_chmod\nValidación de dueño o root"];
+  inode [label="Inodo en memoria\nshort uid y short mode\nProtegido por sleeplock"];
+  disk [label="Inodo en disco\n128 bytes · 8 por bloque\niupdate y registro transaccional"];
+  stat [label="stati y fstat\nConsulta de UID y modo"];
+  mkfs [label="mkfs\nImagen inicial y hogares"];
+  ls [label="ls -l\nPermisos y propietario visibles"];
+  proc -> crear;
+  proc -> chmod;
+  crear -> inode;
+  chmod -> inode;
+  inode -> disk [label="iupdate"];
+  disk -> inode [label="ilock"];
+  inode -> stat;
+  stat -> ls;
+  mkfs -> disk;
+  {rank=same; crear; chmod}
+  {rank=same; disk; stat}
+}

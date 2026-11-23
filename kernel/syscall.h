@@ -25,3 +25,4 @@
 #define SYS_startsession 24
 #define SYS_readsecret 25
 #define SYS_authenticate 26
+#define SYS_chmod 27

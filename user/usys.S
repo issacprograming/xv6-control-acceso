@@ -130,3 +130,8 @@ authenticate:
  li a7, SYS_authenticate
  ecall
  ret
+.global chmod
+chmod:
+ li a7, SYS_chmod
+ ecall
+ ret

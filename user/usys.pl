@@ -47,3 +47,4 @@ entry("getuid");
 entry("startsession");
 entry("readsecret");
 entry("authenticate");
+entry("chmod");

@@ -752,3 +752,10 @@ procdump(void)
     printk("\n");
   }
 }
+
+// Shared identity interface for filesystem metadata and authorization.
+int
+get_current_uid(void)
+{
+  return myproc()->uid;
+}
