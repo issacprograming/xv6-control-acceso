@@ -110,3 +110,8 @@ sync:
  li a7, SYS_sync
  ecall
  ret
+.global getuid
+getuid:
+ li a7, SYS_getuid
+ ecall
+ ret
