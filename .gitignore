@@ -1,0 +1,12 @@
+*.o
+*.d
+*.asm
+*.sym
+*.img
+*.out
+*.bin
+*.pyc
+kernel/kernel
+user/_*
+mkfs/mkfs
+.gdb_history
