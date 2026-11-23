@@ -1,16 +1,14 @@
-# Propietarios y permisos persistentes con chmod y ls -l
+# Cierre de integración y pruebas autenticadas P1-P8
 
-Añade UID/modo a los inodos, sincroniza disco/memoria/stat/mkfs y permite
-cambiar permisos solo al dueño o root. Incluye chmod, ls -l y pruebas
-reproducibles con capturas reales. Depende de la rama de identidad e98304b.
+Verifica la integración baab949 de los tres módulos con sesiones reales y tres
+harts. Agrega pruebas negativas de lectura/exec/eliminación, conservación del
+archivo rechazado, auditoría de objetos, límite circular, descriptores abiertos,
+ausencia de escalada y persistencia de contenido.
 
-Validación: compilación GCC RISC-V 14.2; QEMU 10.0.13; P3 y P5 aprobadas;
-persistencia tras reinicio aprobada; usertests -q: ALL TESTS PASSED.
-El UID de pruebas se fija por el depurador externo; no se declara login probado.
+P1-P8 aprobadas: 24 comprobaciones de aceptación y 21 etapas de la suite de
+Samir, incluida usertests -q con ALL TESTS PASSED. P7 ya es obligatoria y no
+puede omitirse como dependencia pendiente. Se conservan los antecedentes.
 
-P7 negativa falla por falta del control de unlink/directorios de Hans;
-la eliminación por el dueño funciona. No fusionar como integración terminada.
-Revisar especialmente inodos de 128 bytes, cambio de FSMAGIC, bootstrap UID 0,
-convención del dígito central y disponibilidad del syscall 24.
-
-Revisión de otro integrante pendiente. El Word compartido se actualiza aparte.
+Se actualizan documentación y capturas. El Word compartido se mantiene aparte.
+No se cambian los controles del kernel de los compañeros ni se fusiona main
+sin la revisión del equipo.

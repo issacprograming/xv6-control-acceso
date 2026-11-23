@@ -1,156 +1,129 @@
-# Módulo de propietarios y permisos
+# Propietarios y permisos de archivos
 
-Responsable: Samir Bryan Cordero Garcia (`sam-dx`). Rama: `feature/permisos-archivos`.
-Base de integración: `e98304b`, rama de identidad de Isaac. Base de xv6 en main: `418f9e6`.
+Responsable del módulo: Samir Bryan Cordero Garcia (`sam-dx`).
+Los cuatro commits originales de `feature/permisos-archivos` se conservaron.
+La validación final parte de `baab949` de `integration/proyecto-final`, que
+integra la autenticación de Isaac y la autorización y auditoría de Hans.
+La rama de cierre es `integration/cierre-samir`.
 
-## Integración con autenticación
+## Resultado final
 
-En `integration/autenticacion-permisos`, init conserva UID -1 y abre el
-dispositivo `/console` creado por mkfs con UID 0. Genera una imagen nueva
-para el arranque con esta integración. Los hogares siguen usando los UID
-de las cuentas de Isaac y Samir.
+P1-P8 están aprobadas en QEMU con sesiones autenticadas. Pasaron las 24
+comprobaciones de `run_integrated.py` y las 21 etapas de `run_samir.py`, incluida
+la suite original `usertests -q` con `ALL TESTS PASSED`. Se usaron tres harts,
+GCC RISC-V 14.2.0 y QEMU 10.0.13 en Debian 13.
 
-La ABI de integración conserva `getuid=23`, `startsession=24`,
-`readsecret=25` y `authenticate=26`. `chmod` usa el número 27.
-Los programas incorporados al kernel y los ejecutables de la imagen se
-construyen a partir de la misma lista del Makefile. El modo inicial de los
-ejecutables de disco es 0755.
+P7 ya no depende de una integración pendiente: el kernel rechaza la eliminación
+ajena tanto por los permisos de un directorio privado como por la propiedad del
+objetivo bajo un padre 0777. La prueba verifica que el archivo continúa intacto
+y que el propietario sí puede eliminarlo. También se probaron padres sin w y
+sin x. El fallo de la primera rama modular se conserva como antecedente.
 
-El ejecutor usa sesiones autenticadas en QEMU. Para conservar la imagen y las
-evidencias originales, usa una copia y un directorio de resultados separado.
+## Implementación
 
-```sh
-make -j4 kernel/kernel fs.img
-python3 tests/test_mkfs.py
-resultados=$(mktemp -d)
-cp fs.img "$resultados/fs.img"
-python3 tests/run_samir.py --image "$resultados/fs.img" --output "$resultados"
-```
+- `struct dinode`, `struct inode` y `struct stat`: `short uid` y `short mode`.
+- `ialloc`: asigna el UID del creador y modo 0644 a archivos, 0755 a directorios.
+- `ilock`, `iupdate` y `stati`: cargan, persisten y exponen los metadatos.
+- `sys_chmod`: valida modo y ruta; bloquea el inodo; autoriza dueño o root;
+  actualiza mediante el journal. Los rechazos no cambian modo ni propietario.
+- `user/chmod.c`: tres dígitos octales o cuatro con cero inicial.
+- `ls -l`: seis bits rwx, UID, octal, número de inodo y tamaño; ls sin opciones
+  conserva su salida anterior.
 
-Las secciones siguientes registran el estado de la rama original de Samir.
+El inodo original de 64 bytes pasaría a 68 al agregar los campos, sin dividir
+el bloque de 1024. Se usa un inodo de 128 bytes con quince enteros reservados:
+ocho inodos por bloque, manteniendo NDIRECT=12 y el tamaño máximo de archivo.
+FSMAGIC cambió de 0x10203040 a 0x10203041 para rechazar imágenes antiguas.
+No existe migración automática. NINODES=200 requiere 26 bloques de inodos.
 
-## Estado comprobado
+`mkfs` crea / y /home con UID 0 y 0755; los hogares de Isaac y Samir con UID
+1001/1002 y 0700; los programas con 0755 y README con 0644. La inicialización
+especial de /console para el gestor de sesiones forma parte de la integración.
 
-| Componente o caso | Resultado |
-| --- | --- |
-| Inodos, mkfs, stat, chmod, ls -l | Implementados y compilados |
-| P3 propietario | Aprobada en QEMU con UID 1002 controlado externamente |
-| P5 dueño / ajeno / root y cinco entradas inválidas | Aprobada en QEMU |
-| P7 eliminación por el dueño | Aprobada |
-| P7 eliminación por otro UID | Fallida: depende de autorización de Hans |
-| P8b persistencia | Aprobada al reiniciar la misma imagen |
-| uidtest de Isaac | Reproducida con UID -1 esperado por su prueba actual |
-| usertests -q | ALL TESTS PASSED |
-| Login y auditoría | Pendientes de los módulos de Isaac y Hans |
-| Publicación en GitHub | Bloqueada: integración devuelve 403 y CLI sin credenciales |
+## Convención de modos y ABI final
 
-Las pruebas no equivalen a una sesión autenticada. El host cambia el UID de la
-shell mediante la interfaz GDB de QEMU, enlazada solo a 127.0.0.1. No se agregó
-una syscall setuid ni un mecanismo de prueba al kernel de producción.
+Se conservan seis bits efectivos: `(mode >> 6) & 7` para dueño y `mode & 7`
+para otros. No hay grupos. El contrato incluye 0644, 0755 y 0777 pese a pedir
+el dígito central cero. Se admite que ese dígito sea cero o repita el de otros;
+no interviene en la autorización. Se rechazan 0670, negativos y bits especiales.
 
-## Diseño
-
-```mermaid
-flowchart TD
-  proceso["Proceso con UID"] --> crear["ialloc: valores iniciales"]
-  proceso --> chmod["sys_chmod: dueño o root"]
-  crear --> memoria["inode: uid y mode"]
-  chmod --> memoria
-  memoria --> disco["iupdate y journal: dinode"]
-  disco -->|ilock| memoria
-  memoria --> consulta["stati y fstat"]
-  consulta --> ls["ls -l"]
-```
-
-| Representación | Campos | Condición |
+| Llamada | Número final | Responsable |
 | --- | --- | --- |
-| struct proc | int uid, existente en rama de Isaac | init UID 0; fork hereda |
-| struct inode | short uid, short mode | Acceso con sleeplock del inodo |
-| struct dinode | short uid, short mode y 15 uint reservados | 128 bytes, 8 por bloque |
-| struct stat | short uid, short mode | Permite consultar propiedad y modo |
+| getuid | 23 | Isaac |
+| startsession | 24 | Isaac |
+| readsecret | 25 | Isaac |
+| authenticate | 26 | Isaac |
+| chmod | 27 | Samir |
+| auditread | 28 | Hans |
 
-El inodo original tiene 64 bytes. Añadir cuatro produciría 68, que no divide
-1024 y rompe la aserción de mkfs. Se conservó NDIRECT=12 y el límite original
-MAXFILE, ampliando el inodo a 128 bytes. NINODES sigue en 200; los bloques de
-inodos pasan a 26. FSMAGIC pasa de 0x10203040 a 0x10203041: las imágenes del
-formato anterior se rechazan. No existe migración de imágenes antiguas.
+chmod era 24 en la primera rama modular. Se renumeró al integrar las llamadas
+de autenticación. `startsession` es una interfaz interna del gestor: retorna
+un PID/0 al crear la sesión y `STARTSESSION_DENIED` (-2) al rechazar un proceso
+ordinario. La primera aserción adicional esperaba -1; se corrigió el test para
+usar la constante real, sin modificar ni debilitar el kernel.
 
-`ialloc` toma el UID del proceso y asigna 0644 a archivos/dispositivos y 0755
-a directorios; rechaza UID negativo o fuera del rango de short positivo.
-`ilock`, `iupdate` y `stati` cargan, persisten y exponen ambos campos.
-`mkfs` inicializa / y /home con UID 0 y 0755; los hogares isaac y samir con
-UID 1001/1002 y 0700; los programas `user/_*` con 0755 y README con 0644.
+## Identidad y autorización integradas
 
-## Convención de modos
+La validación final usa login y contraseñas educativas predefinidas de
+`kernel/auth.c`. No se fijan UID por GDB. El gestor de sesiones es un proceso
+sin identidad autenticada; solo su flujo restringido crea el login. fork hereda
+UID/sesión; exec conserva identidad. Un proceso autenticado no puede usar
+`authenticate` para convertirse en root ni iniciar otra sesión privilegiada.
 
-El contrato pide dígito central cero pero también usa 0644, 0755 y 0777. Para
-mantener los ejemplos y seis bits efectivos, se acepta dígito central cero
-o igual al de otros. Nunca se usa para autorizar; no existen grupos.
-Se aceptan 0600, 0604, 0644, 0700, 0705, 0755 y 0777; se rechazan 0670,
-valores negativos y bits fuera de 0777. Hans debe seleccionar exclusivamente
-`(mode >> 6) & 7` para el dueño y `mode & 7` para otros; root supera los
-controles ordinarios según el contrato. La convención queda documentada para
-su revisión durante la integración.
+Hans aplica r/w/x a open, ejecución, recorrido y modificación de directorios.
+La eliminación exige w+x del padre y propiedad del objetivo salvo root. Los
+descriptores ya abiertos conservan capacidades tras chmod; las nuevas aperturas
+sí observan el modo nuevo. La auditoría registra PID, UID, operación e inodo,
+se limita a 64 eventos y solo root la consulta.
 
-## chmod y consulta
+El gestor y root tienen programas incorporados al kernel. Los programas de
+usuarios normales se cargan del disco y pasan los controles de ejecución.
+Es una decisión educativa particular, no una infraestructura de producción.
 
-`SYS_getuid=23` pertenece a Isaac; `SYS_chmod=24` se añade en esta rama.
-`chmod(const char *path, int mode)` retorna 0/-1. La syscall valida entrada,
-inicia transacción, obtiene el inodo, lo bloquea, comprueba UID dueño/root,
-actualiza mode y persiste con iupdate. Todo rechazo libera referencias,
-cerrojos y transacción; no modifica el modo ni el propietario.
+## Reproducir desde una imagen nueva de prueba
 
-El comando acepta `chmod 600 ruta` y `chmod 0600 ruta`; exige exactamente
-tres dígitos octales o cuatro con cero inicial. `ls` conserva su salida
-original; `ls -l ruta` muestra seis bits rwx, UID, octal, inodo y tamaño.
-
-## Reproducir
-
-En Ubuntu/Debian con GCC RISC-V, binutils, QEMU >=7.2, Make, GCC del host,
-Perl, Python 3 y bc:
+Dependencias: GCC RISC-V y binutils, GCC del host, QEMU >=7.2, Make, Perl,
+Python 3 y bc. `make clean` borra la imagen: usarlo al preparar una nueva prueba,
+no entre los arranques que deben demostrar persistencia.
 
 ```sh
-# Solo para generar una imagen nueva del formato modificado:
 make clean
 make -j4 kernel/kernel fs.img
 python3 tests/test_mkfs.py
-python3 tests/run_samir.py
-# Uso interactivo posterior, conservando la imagen:
-make qemu
+python3 tests/run_integrated.py
+python3 tests/run_samir.py --output evidencias/samir/integracion
 ```
 
-`run_samir.py` modifica la imagen de prueba y guarda resultados en
-`evidencias/samir/`. Usa un reinicio real y sync, sin ejecutar mkfs entre
-ambos arranques. Su código de salida refleja las comprobaciones del módulo;
-P7 negativa se informa expresamente como fallida y bloqueada por integración,
-sin convertirla en aprobada. Para una demostración manual con capturas:
-`python3 tests/visual_samir.py` (copia la imagen a /tmp antes de probar).
+`run_integrated.py` copia fs.img a /tmp antes de probar. `run_samir.py` utiliza
+la imagen indicada por `--image` (fs.img por defecto). Ambos reinician QEMU sin
+regenerar la imagen para P8b. P7 negativa forma parte de las comprobaciones
+obligatorias: un fallo de P7 hace fallar la suite. `XV6_TEST_CPUS` permite elegir
+los harts; el valor por defecto verificado es 3.
 
-Entorno verificado: Debian 13, GCC RISC-V 14.2.0, QEMU 10.0.13, un hart para
-el control determinista del depurador. La compilación original admite SMP;
-no se afirma haber completado pruebas de estrés concurrente multiusuario.
+```sh
+make qemu
+python3 tests/visual_integrated.py
+```
 
-## Evidencias y límites
+La demostración visual ejecuta de nuevo los casos reales y pausa para capturas.
+P1-P2, P3, P4, P5, P6, P7, auditoría y persistencia tienen imágenes finales.
 
-Los TXT son la salida real de QEMU, los PNG son capturas de una terminal
-que ejecuta el mismo programa y los JSON contienen resultados por etapa.
-`ejecucion_inicial/` conserva el fallo del uidtest original al esperar -1
-cuando init ya arranca en UID 0. Se repitió con la precondición UID -1 y
-pasó sin modificar el programa de Isaac. Falta adaptar su prueba a login.
+## Evidencias
 
-P7 negativa falla porque esta rama no modifica `namex`, `open`, `exec`,
-`link` ni `unlink` para aplicar la autorización de Hans. Esas funciones no
-se declaran protegidas. Las capacidades de descriptores abiertos y la
-auditoría deben comprobarse cuando se integre ese módulo. No fusionar en
-main como sistema multiusuario terminado.
+- `evidencias/integracion-final/`: 24 comprobaciones, dos sesiones, PNG finales,
+  datos del entorno e incidencia de la primera expectativa del test.
+- `evidencias/samir/integracion/`: 21 etapas y regresión original.
+- `evidencias/samir/ejecucion_inicial/`: antecedentes de la rama modular.
+- `docs/CIERRE_INTEGRACION.md`: matriz final y alcance.
 
-El informe compartido se mantiene en Word y no se incluye en Git, de acuerdo
-con el contrato técnico. Este archivo documenta únicamente el código.
+El informe se actualiza en el Word compartido y no se incluye en Git, de
+acuerdo con el contrato del equipo. La revisión y publicación de la rama de
+cierre deben conservar los commits de los tres integrantes.
 
 ## Referencias
 
 Cox, R., Kaashoek, F., & Morris, R. (2022). *xv6: A simple, Unix-like teaching
-operating system* (Rev. 3). Massachusetts Institute of Technology.
+operating system* (Rev. 3). MIT.
 https://pdos.csail.mit.edu/6.S081/2022/xv6/book-riscv-rev3.pdf
 
 MIT PDOS. (s. f.). *xv6-riscv* [Código fuente]. GitHub.
