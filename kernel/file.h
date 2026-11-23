@@ -25,6 +25,8 @@ struct inode {
   short major;
   short minor;
   short nlink;
+  short uid;   // Owner UID
+  short mode;  // Persistent permissions
   uint size;
   uint addrs[NDIRECT + 1];
 };

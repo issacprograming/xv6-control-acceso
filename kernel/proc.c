@@ -225,6 +225,7 @@ userinit(void)
 
   p = allocproc();
   initproc = p;
+  p->uid = UID_ROOT; // bootstrap init; login must drop to authenticated UID
 
   p->cwd = namei("/");
 
@@ -702,4 +703,11 @@ procdump(void)
     printk("%d %s %s", p->pid, state, p->name);
     printk("\n");
   }
+}
+
+// Shared identity interface for filesystem metadata and authorization.
+int
+get_current_uid(void)
+{
+  return myproc()->uid;
 }

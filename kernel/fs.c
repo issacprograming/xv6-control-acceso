@@ -20,6 +20,7 @@
 #include "fs.h"
 #include "buf.h"
 #include "file.h"
+#include "permissions.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 // there should be one superblock per disk device, but we run with
@@ -204,12 +205,18 @@ ialloc(uint dev, short type)
   struct buf *bp;
   struct dinode *dip;
 
+  int uid = get_current_uid();
+  if (uid < 0 || uid > 32767)
+    return 0;
+
   for (inum = 1; inum < sb.ninodes; inum++) {
     bp = bread(dev, IBLOCK(inum, sb));
     dip = (struct dinode *)bp->data + inum % IPB;
     if (dip->type == 0) { // a free inode
       memset(dip, 0, sizeof(*dip));
       dip->type = type;
+      dip->uid = uid;
+      dip->mode = type == T_DIR ? DEFAULT_DIR_MODE : DEFAULT_FILE_MODE;
       log_write(bp); // mark it allocated on the disk
       brelse(bp);
       return iget(dev, inum);
@@ -236,6 +243,8 @@ iupdate(struct inode *ip)
   dip->major = ip->major;
   dip->minor = ip->minor;
   dip->nlink = ip->nlink;
+  dip->uid = ip->uid;
+  dip->mode = ip->mode;
   dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
   log_write(bp);
@@ -309,6 +318,8 @@ ilock(struct inode *ip)
     ip->major = dip->major;
     ip->minor = dip->minor;
     ip->nlink = dip->nlink;
+    ip->uid = dip->uid;
+    ip->mode = dip->mode;
     ip->size = dip->size;
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
     brelse(bp);
@@ -500,6 +511,8 @@ stati(struct inode *ip, struct stat *st)
   st->type = ip->type;
   st->nlink = ip->nlink;
   st->size = ip->size;
+  st->uid = ip->uid;
+  st->mode = ip->mode;
 }
 
 // Read data from inode.

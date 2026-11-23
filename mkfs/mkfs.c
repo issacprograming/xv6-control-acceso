@@ -10,6 +10,7 @@
 #include "kernel/fs.h"
 #include "kernel/stat.h"
 #include "kernel/param.h"
+#include "kernel/permissions.h"
 
 #ifndef static_assert
 #define static_assert(a, b)                                                    \
@@ -45,6 +46,7 @@ void rsect(uint sec, void *buf);
 uint ialloc(ushort type);
 void iappend(uint inum, void *p, int n);
 void die(const char *);
+uint makedir(uint parent, const char *name, short uid, short mode);
 
 // convert to riscv byte order
 ushort
@@ -131,6 +133,10 @@ main(int argc, char *argv[])
   strcpy(de.name, "..");
   iappend(rootino, &de, sizeof(de));
 
+  uint home = makedir(rootino, "home", ROOT_UID, DEFAULT_DIR_MODE);
+  makedir(home, "isaac", 1001, 0700);
+  makedir(home, "samir", 1002, 0700);
+
   for (i = 2; i < argc; i++) {
     // get rid of "user/"
     char *shortname;
@@ -154,6 +160,10 @@ main(int argc, char *argv[])
     assert(strlen(shortname) <= DIRSIZ);
 
     inum = ialloc(T_FILE);
+    rinode(inum, &din);
+    din.mode = xshort(argv[i][0] == 'u' &&
+                      strncmp(argv[i], "user/_", 6) == 0 ? 0755 : 0644);
+    winode(inum, &din);
 
     bzero(&de, sizeof(de));
     de.inum = xshort(inum);
@@ -232,6 +242,8 @@ ialloc(ushort type)
   bzero(&din, sizeof(din));
   din.type = xshort(type);
   din.nlink = xshort(1);
+  din.uid = xshort(ROOT_UID);
+  din.mode = xshort(type == T_DIR ? DEFAULT_DIR_MODE : DEFAULT_FILE_MODE);
   din.size = xint(0);
   winode(inum, &din);
   return inum;
@@ -304,4 +316,31 @@ die(const char *s)
 {
   perror(s);
   exit(1);
+}
+
+// Create directories offline using the same format as the kernel.
+uint
+makedir(uint parent, const char *name, short uid, short mode)
+{
+  uint inum = ialloc(T_DIR);
+  struct dinode din;
+  struct dirent de;
+  rinode(inum, &din);
+  din.uid = xshort(uid);
+  din.mode = xshort(mode);
+  winode(inum, &din);
+  bzero(&de, sizeof(de));
+  de.inum = xshort(inum);
+  strcpy(de.name, ".");
+  iappend(inum, &de, sizeof(de));
+  de.inum = xshort(parent);
+  strcpy(de.name, "..");
+  iappend(inum, &de, sizeof(de));
+  de.inum = xshort(inum);
+  strcpy(de.name, name);
+  iappend(parent, &de, sizeof(de));
+  rinode(parent, &din);
+  din.nlink = xshort(xshort(din.nlink) + 1);
+  winode(parent, &din);
+  return inum;
 }

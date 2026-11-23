@@ -21,7 +21,7 @@ struct superblock {
   uint bmapstart;  // Block number of first free map block
 };
 
-#define FSMAGIC 0x10203040
+#define FSMAGIC 0x10203041
 
 #define NDIRECT   12
 #define NINDIRECT (BSIZE / sizeof(uint))
@@ -34,9 +34,14 @@ struct dinode {
   short major;             // Major device number (T_DEVICE only)
   short minor;             // Minor device number (T_DEVICE only)
   short nlink;             // Number of links to inode in file system
+  short uid;               // Owner UID
+  short mode;              // Owner/others rwx; no group identity
   uint size;               // Size of file (bytes)
   uint addrs[NDIRECT + 1]; // Data block addresses
+  uint reserved[15];      // 128-byte dinode: exactly 8 inodes per block
 };
+
+typedef char dinode_size_must_be_128[(sizeof(struct dinode) == 128) ? 1 : -1];
 
 // Inodes per block.
 #define IPB (BSIZE / sizeof(struct dinode))
