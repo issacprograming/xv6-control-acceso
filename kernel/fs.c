@@ -21,6 +21,7 @@
 #include "buf.h"
 #include "file.h"
 #include "permissions.h"
+#include "audit.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 // there should be one superblock per disk device, but we run with
@@ -718,6 +719,10 @@ namex(char *path, int nameiparent, char *name)
       return 0;
     }
     if (ip->nlink == 0) {
+      iunlockput(ip);
+      return 0;
+    }
+    if (check_access(ip, PERM_X, AUDIT_SEARCH) < 0) {
       iunlockput(ip);
       return 0;
     }
