@@ -134,6 +134,7 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h $K/stat.h $K/permissions.h $K/uid.h
 .PRECIOUS: %.o
 
 UPROGS=\
+	$U/_accesstest\
 	$U/_audit\
 	$U/_permtest\
 	$U/_chmod\

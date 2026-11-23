@@ -1,0 +1,20 @@
+
+xv6 kernel is booting
+
+hart 2 starting
+hart 1 starting
+Usuario: samir
+Contrasena: 
+$ permtest persist
+PASS: one test stage supplied
+permtest stage=persist uid=1002
+PASS: stat path
+metadata uid=1002 mode=0600
+PASS: owner and persistent mode
+PASS: P8b file content survived reboot
+DONE: persist
+$ uidtest
+uidtest: fork inherited UID 1002
+uidtest: exec preserved UID 1002
+uidtest: OK
+$ 

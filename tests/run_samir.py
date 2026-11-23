@@ -16,7 +16,7 @@ class VM:
     def __init__(self, image):
         self.p = subprocess.Popen([
             'qemu-system-riscv64', '-machine', 'virt', '-bios', 'none',
-            '-kernel', 'kernel/kernel', '-m', '128M', '-smp', '1', '-nographic',
+            '-kernel', 'kernel/kernel', '-m', '128M', '-smp', os.environ.get('XV6_TEST_CPUS', '3'), '-nographic',
             '-monitor', 'none', '-global', 'virtio-mmio.force-legacy=false',
             '-drive', f'file={image},if=none,format=raw,id=x0',
             '-device', 'virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0',
@@ -140,10 +140,10 @@ def main():
         (args.output / 'sesion_2.txt').write_text(vm.history)
         vm.close()
         (args.output / 'resultados.json').write_text(json.dumps(records, ensure_ascii=False, indent=2) + '\n')
-    required = [r for r in records if r['case'] != 'P7_integration']
+    required = records
     if not all(r['passed'] for r in required):
         raise SystemExit(1)
-    print('P7: ' + ('PASS' if p7 else 'BLOCKED: authorization module pending'))
+    print('P7: ' + ('PASS' if p7 else 'FAIL'))
 
 if __name__ == '__main__':
     main()

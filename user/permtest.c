@@ -62,6 +62,7 @@ main(int argc, char **argv)
     fd = open(file, O_RDONLY);
     require(fd >= 0, "P5 other UID reads mode 0644");
     close(fd);
+    require(open(file, O_WRONLY) == -1, "P5 other UID cannot write mode 0644");
   } else if (!strcmp(argv[1], "p5-root")) {
     require(getuid() == 0, "root identity");
     metadata(file, 1002, 0644);
@@ -69,6 +70,10 @@ main(int argc, char **argv)
     metadata(file, 1002, 0600);
   } else if (!strcmp(argv[1], "persist")) {
     metadata(file, 1002, 0600);
+    fd = open(file, O_RDONLY);
+    require(fd >= 0 && read(fd, buf, 6) == 6 && !strcmp(buf, "samir\n"),
+            "P8b file content survived reboot");
+    close(fd);
   } else if (!strcmp(argv[1], "p7-setup")) {
     require(getuid() == 1002, "owner identity");
     mkdir("/home/samir/p7dir");

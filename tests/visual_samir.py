@@ -26,7 +26,7 @@ try:
     input('\n[Capturar P5 root; Enter continua] ')
     show('P7a - el propietario puede eliminar su archivo',1002,
          ['permtest p7-setup','permtest p7-owner','permtest p7-setup'])
-    show('P7b - FALLO INTEGRACION: falta autorizacion de Hans',1001,
+    show('P7b - integracion: eliminacion ajena denegada',1001,
          ['permtest p7-other'])
     vm.login(0)
     print(vm.command('sync'),end='')

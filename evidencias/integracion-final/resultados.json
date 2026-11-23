@@ -1,0 +1,122 @@
+[
+  {
+    "case": "P2_login_invalido",
+    "passed": true,
+    "output": "root\nContrasena: \nCredenciales invalidas\nUsuario: "
+  },
+  {
+    "case": "P1_login_samir",
+    "passed": true,
+    "output": "whoami\nsamir (UID 1002)\n$ "
+  },
+  {
+    "case": "P8a_uid_samir",
+    "passed": true,
+    "output": "uidtest\nuidtest: fork inherited UID 1002\nuidtest: exec preserved UID 1002\nuidtest: OK\n$ "
+  },
+  {
+    "case": "P3_propietario",
+    "passed": true,
+    "output": "permtest p3\nPASS: one test stage supplied\npermtest stage=p3 uid=1002\nPASS: Samir identity\nPASS: P3 create own file\nPASS: P3 write own file\nPASS: stat path\nmetadata uid=1002 mode=0644\nPASS: owner and persistent mode\nPASS: P3 private mode\nPASS: P3 read own private file\nPASS: stat path\nmetadata uid=1002 mode=0600\nPASS: owner and persistent mode\nDONE: p3\n$ "
+  },
+  {
+    "case": "descriptor_abierto",
+    "passed": true,
+    "output": "accesstest fd\nPASS: test supplied\naccesstest fd UID=1002\nPASS: owner identity\nPASS: descriptors opened before chmod\nPASS: remove all new-open permissions\nPASS: existing descriptor remains writable\nPASS: existing descriptor remains readable\nPASS: new descriptor respects changed mode\nPASS: owner restores mode\nDONE: fd\n$ "
+  },
+  {
+    "case": "sin_escalada",
+    "passed": true,
+    "output": "accesstest auth\nPASS: test supplied\naccesstest auth UID=1002\nPASS: authenticated normal identity\nPASS: ordinary process cannot start privileged login\nPASS: authenticated process cannot escalate through authenticate\nPASS: normal user cannot create device\nDONE: auth\n$ "
+  },
+  {
+    "case": "P5_propietario",
+    "passed": true,
+    "output": "permtest p5-owner\nPASS: one test stage supplied\npermtest stage=p5-owner uid=1002\nPASS: owner identity\nPASS: P5 searchable parent for other UID\nPASS: P5 owner chmod allowed\nPASS: stat path\nmetadata uid=1002 mode=0644\nPASS: owner and persistent mode\nPASS: P5 reject negative mode\nPASS: P5 reject special bits\nPASS: P5 reject independent group rights\nPASS: P5 reject missing path\nPASS: P5 reject invalid pointer\nPASS: stat path\nmetadata uid=1002 mode=0644\nPASS: owner and persistent mode\nDONE: p5-owner\n$ "
+  },
+  {
+    "case": "P5_ajeno",
+    "passed": true,
+    "output": "permtest p5-other\nPASS: one test stage supplied\npermtest stage=p5-other uid=1001\nPASS: non-owner identity\nPASS: P5 non-owner chmod denied\nPASS: P5 other UID reads mode 0644\nPASS: P5 other UID cannot write mode 0644\nDONE: p5-other\n$ "
+  },
+  {
+    "case": "P5_root",
+    "passed": true,
+    "output": "permtest p5-root\nPASS: one test stage supplied\npermtest stage=p5-root uid=0\nPASS: root identity\nPASS: stat path\nmetadata uid=1002 mode=0644\nPASS: owner and persistent mode\nPASS: P5 root chmod allowed\nPASS: stat path\nmetadata uid=1002 mode=0600\nPASS: owner and persistent mode\nDONE: p5-root\n$ "
+  },
+  {
+    "case": "preparar_P4_P7",
+    "passed": true,
+    "output": "accesstest setup\nPASS: test supplied\naccesstest setup UID=1001\nPASS: Isaac owns fixtures\nPASS: create fixture\nPASS: write fixture\nPASS: P4 private mode 0600\nPASS: create fixture\nPASS: write fixture\nPASS: P4 owner UID 1001\nDONE: setup\n$ "
+  },
+  {
+    "case": "P4_lectura_denegada",
+    "passed": true,
+    "output": "accesstest p4\nPASS: test supplied\naccesstest p4 UID=1002\nPASS: Samir is not owner\nPASS: P4 read denied\nPASS: P4 truncate denied\nPASS: audit query is root-only\nDONE: p4\n$ "
+  },
+  {
+    "case": "P6_exec_denegado",
+    "passed": true,
+    "output": "accesstest p6\nPASS: test supplied\naccesstest p6 UID=1002\nPASS: normal user\nPPAASSSS::  ffoorrkk  ffoorr  ddeenniieedd  eexxeecc\n\nPASS: P6 exec without x denied\nDONE: p6\n$ "
+  },
+  {
+    "case": "P7_propiedad_en_directorio_compartido",
+    "passed": true,
+    "output": "accesstest p7-other\nPASS: test supplied\naccesstest p7-other UID=1002\nPASS: non-owner in shared directory\nPASS: P7 foreign unlink denied despite parent 0777\nDONE: p7-other\n$ "
+  },
+  {
+    "case": "P7_archivo_conservado_y_eliminacion_propia",
+    "passed": true,
+    "output": "accesstest p7-owner\nPASS: test supplied\naccesstest p7-owner UID=1001\nPASS: owner in shared directory\nPASS: P7 rejected unlink preserved file and owner\nPASS: P7 owner unlink allowed\nDONE: p7-owner\n$ "
+  },
+  {
+    "case": "P7_creacion",
+    "passed": true,
+    "output": "permtest p7-setup\nPASS: one test stage supplied\npermtest stage=p7-setup uid=1002\nPASS: owner identity\nPASS: P7 restricted directory\nPASS: P7 victim created\nDONE: p7-setup\n$ "
+  },
+  {
+    "case": "P7_reglas_directorio",
+    "passed": true,
+    "output": "accesstest p7-parent\nPASS: test supplied\naccesstest p7-parent UID=1002\nPASS: directory owner\nPASS: parent has x but not w\nPASS: P7 own unlink needs parent w\nPASS: parent has w but not x\nPASS: P7 own unlink needs parent x\nPASS: restore parent wx\nPASS: rejected operations preserved victim\nDONE: p7-parent\n$ "
+  },
+  {
+    "case": "P7_directorio_privado",
+    "passed": true,
+    "output": "permtest p7-other\nPASS: one test stage supplied\npermtest stage=p7-other uid=1001\nPASS: non-owner identity\nPASS: P7 unlink protected file denied\nDONE: p7-other\n$ "
+  },
+  {
+    "case": "P7_eliminacion_dueno",
+    "passed": true,
+    "output": "permtest p7-owner\nPASS: one test stage supplied\npermtest stage=p7-owner uid=1002\nPASS: owner identity\nPASS: P7 owner unlink allowed\nDONE: p7-owner\n$ "
+  },
+  {
+    "case": "auditoria_P4_P6_P7",
+    "passed": true,
+    "output": "accesstest audit\nPASS: test supplied\naccesstest audit UID=0\nPASS: root queries audit\nPASS: audit object metadata\nPASS: P4 P6 P7 audit records match UID and denied objects\nDONE: audit\n$ "
+  },
+  {
+    "case": "consulta_audit",
+    "passed": true,
+    "output": "audit\npid=2 uid=1002 op=write inum=2 denied\npid=7 uid=1002 op=read inum=33 denied\npid=8 uid=1002 op=mknod inum=0 denied\npid=10 uid=1001 op=write inum=2 denied\npid=11 uid=1001 op=chmod inum=33 denied\npid=11 uid=1001 op=write inum=33 denied\npid=16 uid=1001 op=write inum=2 denied\npid=20 uid=1002 op=write inum=2 denied\npid=21 uid=1002 op=read inum=35 denied\npid=21 uid=1002 op=write inum=35 denied\npid=21 uid=1002 op=auditread inum=0 denied\npid=23 uid=1002 op=exec inum=12 denied\npid=24 uid=1002 op=delete inum=36 denied\npid=25 uid=1001 op=write inum=2 denied\npid=27 uid=1002 op=write inum=2 denied\npid=29 uid=1002 op=delete inum=36 denied\npid=29 uid=1002 op=search inum=36 denied\npid=30 uid=1001 op=write inum=2 denied\npid=31 uid=1001 op=search inum=36 denied\npid=32 uid=1002 op=write inum=2 denied\n$ "
+  },
+  {
+    "case": "llenado_auditoria",
+    "passed": true,
+    "output": "accesstest ring-fill\nPASS: test supplied\naccesstest ring-fill UID=1002\nPASS: normal user generates denied events\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nPASS: denied event\nRING_PID=39\nDONE: ring-fill\n$ "
+  },
+  {
+    "case": "auditoria_circular_64",
+    "passed": true,
+    "output": "accesstest ring-check 39\nPASS: test supplied\naccesstest ring-check UID=0\nPASS: root and expected process supplied\nPASS: audit bounded at 64 after 66 denials\nPASS: ring object exists\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nPASS: ring retained latest generator events\nDONE: ring-check\n$ "
+  },
+  {
+    "case": "P8b_persistencia_metadatos_y_contenido",
+    "passed": true,
+    "output": "permtest persist\nPASS: one test stage supplied\npermtest stage=persist uid=1002\nPASS: stat path\nmetadata uid=1002 mode=0600\nPASS: owner and persistent mode\nPASS: P8b file content survived reboot\nDONE: persist\n$ "
+  },
+  {
+    "case": "P8a_uid_tras_reinicio",
+    "passed": true,
+    "output": "uidtest\nuidtest: fork inherited UID 1002\nuidtest: exec preserved UID 1002\nuidtest: OK\n$ "
+  }
+]

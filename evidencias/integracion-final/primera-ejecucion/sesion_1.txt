@@ -1,0 +1,48 @@
+
+xv6 kernel is booting
+
+hart 1 starting
+hart 2 starting
+Usuario: root
+Contrasena: 
+Credenciales invalidas
+Usuario: samir
+Contrasena: 
+$ whoami
+samir (UID 1002)
+$ uidtest
+uidtest: fork inherited UID 1002
+uidtest: exec preserved UID 1002
+uidtest: OK
+$ permtest p3
+PASS: one test stage supplied
+permtest stage=p3 uid=1002
+PASS: Samir identity
+PASS: P3 create own file
+PASS: P3 write own file
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+PASS: P3 private mode
+PASS: P3 read own private file
+PASS: stat path
+metadata uid=1002 mode=0600
+PASS: owner and persistent mode
+DONE: p3
+$ accesstest fd
+PASS: test supplied
+accesstest fd UID=1002
+PASS: owner identity
+PASS: descriptors opened before chmod
+PASS: remove all new-open permissions
+PASS: existing descriptor remains writable
+PASS: existing descriptor remains readable
+PASS: new descriptor respects changed mode
+PASS: owner restores mode
+DONE: fd
+$ accesstest auth
+PASS: test supplied
+accesstest auth UID=1002
+PASS: authenticated normal identity
+FAIL: ordinary process cannot start privileged login
+$ 

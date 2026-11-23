@@ -1,0 +1,12 @@
+{
+  "base_integrada": "baab949932c1724b97dab77cdfd8b7a89c341ce6",
+  "harts": 3,
+  "qemu": "10.0.13",
+  "gcc_riscv": "14.2.0",
+  "os": "Debian GNU/Linux 13",
+  "kernel_sha256": "85a9e247b5a8abc06d29696a42b2e4f7c0d2d443659bbeed4c6d11cab8b5e6b4",
+  "aceptacion": 24,
+  "suite_samir": 21,
+  "regresion": "usertests -q: ALL TESTS PASSED",
+  "identidad": "login real, sin GDB"
+}

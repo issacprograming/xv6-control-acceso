@@ -1,0 +1,359 @@
+
+xv6 kernel is booting
+
+hart 2 starting
+hart 1 starting
+Usuario: root
+Contrasena: 
+Credenciales invalidas
+Usuario: samir
+Contrasena: 
+$ whoami
+samir (UID 1002)
+$ uidtest
+uidtest: fork inherited UID 1002
+uidtest: exec preserved UID 1002
+uidtest: OK
+$ permtest p3
+PASS: one test stage supplied
+permtest stage=p3 uid=1002
+PASS: Samir identity
+PASS: P3 create own file
+PASS: P3 write own file
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+PASS: P3 private mode
+PASS: P3 read own private file
+PASS: stat path
+metadata uid=1002 mode=0600
+PASS: owner and persistent mode
+DONE: p3
+$ accesstest fd
+PASS: test supplied
+accesstest fd UID=1002
+PASS: owner identity
+PASS: descriptors opened before chmod
+PASS: remove all new-open permissions
+PASS: existing descriptor remains writable
+PASS: existing descriptor remains readable
+PASS: new descriptor respects changed mode
+PASS: owner restores mode
+DONE: fd
+$ accesstest auth
+PASS: test supplied
+accesstest auth UID=1002
+PASS: authenticated normal identity
+PASS: ordinary process cannot start privileged login
+PASS: authenticated process cannot escalate through authenticate
+PASS: normal user cannot create device
+DONE: auth
+$ permtest p5-owner
+PASS: one test stage supplied
+permtest stage=p5-owner uid=1002
+PASS: owner identity
+PASS: P5 searchable parent for other UID
+PASS: P5 owner chmod allowed
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+PASS: P5 reject negative mode
+PASS: P5 reject special bits
+PASS: P5 reject independent group rights
+PASS: P5 reject missing path
+PASS: P5 reject invalid pointer
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+DONE: p5-owner
+$ Usuario: isaac
+Contrasena: 
+$ permtest p5-other
+PASS: one test stage supplied
+permtest stage=p5-other uid=1001
+PASS: non-owner identity
+PASS: P5 non-owner chmod denied
+PASS: P5 other UID reads mode 0644
+PASS: P5 other UID cannot write mode 0644
+DONE: p5-other
+$ Usuario: root
+Contrasena: 
+$ permtest p5-root
+PASS: one test stage supplied
+permtest stage=p5-root uid=0
+PASS: root identity
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+PASS: P5 root chmod allowed
+PASS: stat path
+metadata uid=1002 mode=0600
+PASS: owner and persistent mode
+DONE: p5-root
+$ mkdir /tmp
+$ chmod 777 /tmp
+$ Usuario: isaac
+Contrasena: 
+$ accesstest setup
+PASS: test supplied
+accesstest setup UID=1001
+PASS: Isaac owns fixtures
+PASS: create fixture
+PASS: write fixture
+PASS: P4 private mode 0600
+PASS: create fixture
+PASS: write fixture
+PASS: P4 owner UID 1001
+DONE: setup
+$ Usuario: root
+Contrasena: 
+$ chmod 644 /echo
+$ Usuario: samir
+Contrasena: 
+$ accesstest p4
+PASS: test supplied
+accesstest p4 UID=1002
+PASS: Samir is not owner
+PASS: P4 read denied
+PASS: P4 truncate denied
+PASS: audit query is root-only
+DONE: p4
+$ accesstest p6
+PASS: test supplied
+accesstest p6 UID=1002
+PASS: normal user
+PPAASSSS::  ffoorrkk  ffoorr  ddeenniieedd  eexxeecc
+
+PASS: P6 exec without x denied
+DONE: p6
+$ accesstest p7-other
+PASS: test supplied
+accesstest p7-other UID=1002
+PASS: non-owner in shared directory
+PASS: P7 foreign unlink denied despite parent 0777
+DONE: p7-other
+$ Usuario: isaac
+Contrasena: 
+$ accesstest p7-owner
+PASS: test supplied
+accesstest p7-owner UID=1001
+PASS: owner in shared directory
+PASS: P7 rejected unlink preserved file and owner
+PASS: P7 owner unlink allowed
+DONE: p7-owner
+$ Usuario: samir
+Contrasena: 
+$ permtest p7-setup
+PASS: one test stage supplied
+permtest stage=p7-setup uid=1002
+PASS: owner identity
+PASS: P7 restricted directory
+PASS: P7 victim created
+DONE: p7-setup
+$ accesstest p7-parent
+PASS: test supplied
+accesstest p7-parent UID=1002
+PASS: directory owner
+PASS: parent has x but not w
+PASS: P7 own unlink needs parent w
+PASS: parent has w but not x
+PASS: P7 own unlink needs parent x
+PASS: restore parent wx
+PASS: rejected operations preserved victim
+DONE: p7-parent
+$ Usuario: isaac
+Contrasena: 
+$ permtest p7-other
+PASS: one test stage supplied
+permtest stage=p7-other uid=1001
+PASS: non-owner identity
+PASS: P7 unlink protected file denied
+DONE: p7-other
+$ Usuario: samir
+Contrasena: 
+$ permtest p7-owner
+PASS: one test stage supplied
+permtest stage=p7-owner uid=1002
+PASS: owner identity
+PASS: P7 owner unlink allowed
+DONE: p7-owner
+$ Usuario: root
+Contrasena: 
+$ accesstest audit
+PASS: test supplied
+accesstest audit UID=0
+PASS: root queries audit
+PASS: audit object metadata
+PASS: P4 P6 P7 audit records match UID and denied objects
+DONE: audit
+$ audit
+pid=2 uid=1002 op=write inum=2 denied
+pid=7 uid=1002 op=read inum=33 denied
+pid=8 uid=1002 op=mknod inum=0 denied
+pid=10 uid=1001 op=write inum=2 denied
+pid=11 uid=1001 op=chmod inum=33 denied
+pid=11 uid=1001 op=write inum=33 denied
+pid=16 uid=1001 op=write inum=2 denied
+pid=20 uid=1002 op=write inum=2 denied
+pid=21 uid=1002 op=read inum=35 denied
+pid=21 uid=1002 op=write inum=35 denied
+pid=21 uid=1002 op=auditread inum=0 denied
+pid=23 uid=1002 op=exec inum=12 denied
+pid=24 uid=1002 op=delete inum=36 denied
+pid=25 uid=1001 op=write inum=2 denied
+pid=27 uid=1002 op=write inum=2 denied
+pid=29 uid=1002 op=delete inum=36 denied
+pid=29 uid=1002 op=search inum=36 denied
+pid=30 uid=1001 op=write inum=2 denied
+pid=31 uid=1001 op=search inum=36 denied
+pid=32 uid=1002 op=write inum=2 denied
+$ chmod 755 /echo
+$ Usuario: samir
+Contrasena: 
+$ accesstest ring-fill
+PASS: test supplied
+accesstest ring-fill UID=1002
+PASS: normal user generates denied events
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+PASS: denied event
+RING_PID=39
+DONE: ring-fill
+$ Usuario: root
+Contrasena: 
+$ accesstest ring-check 39
+PASS: test supplied
+accesstest ring-check UID=0
+PASS: root and expected process supplied
+PASS: audit bounded at 64 after 66 denials
+PASS: ring object exists
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+PASS: ring retained latest generator events
+DONE: ring-check
+$ sync
+$ 

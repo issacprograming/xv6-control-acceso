@@ -1,0 +1,32 @@
+[
+  {
+    "case": "P2_login_invalido",
+    "passed": true,
+    "output": "root\nContrasena: \nCredenciales invalidas\nUsuario: "
+  },
+  {
+    "case": "P1_login_samir",
+    "passed": true,
+    "output": "whoami\nsamir (UID 1002)\n$ "
+  },
+  {
+    "case": "P8a_uid_samir",
+    "passed": true,
+    "output": "uidtest\nuidtest: fork inherited UID 1002\nuidtest: exec preserved UID 1002\nuidtest: OK\n$ "
+  },
+  {
+    "case": "P3_propietario",
+    "passed": true,
+    "output": "permtest p3\nPASS: one test stage supplied\npermtest stage=p3 uid=1002\nPASS: Samir identity\nPASS: P3 create own file\nPASS: P3 write own file\nPASS: stat path\nmetadata uid=1002 mode=0644\nPASS: owner and persistent mode\nPASS: P3 private mode\nPASS: P3 read own private file\nPASS: stat path\nmetadata uid=1002 mode=0600\nPASS: owner and persistent mode\nDONE: p3\n$ "
+  },
+  {
+    "case": "descriptor_abierto",
+    "passed": true,
+    "output": "accesstest fd\nPASS: test supplied\naccesstest fd UID=1002\nPASS: owner identity\nPASS: descriptors opened before chmod\nPASS: remove all new-open permissions\nPASS: existing descriptor remains writable\nPASS: existing descriptor remains readable\nPASS: new descriptor respects changed mode\nPASS: owner restores mode\nDONE: fd\n$ "
+  },
+  {
+    "case": "sin_escalada",
+    "passed": false,
+    "output": "accesstest auth\nPASS: test supplied\naccesstest auth UID=1002\nPASS: authenticated normal identity\nFAIL: ordinary process cannot start privileged login\n$ "
+  }
+]
