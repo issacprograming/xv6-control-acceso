@@ -4,6 +4,7 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "uid.h"
 #include "defs.h"
 
 struct cpu cpus[NCPU];
@@ -123,6 +124,7 @@ allocproc(void)
 
 found:
   p->pid = allocpid();
+  p->uid = UID_UNAUTH;
   p->state = USED;
 
   // Allocate a trapframe page.
@@ -163,6 +165,7 @@ freeproc(struct proc *p)
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
+  p->uid = UID_UNAUTH;
   p->name[0] = 0;
   p->chan = 0;
   p->killed = 0;
@@ -274,6 +277,7 @@ kfork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->uid = p->uid;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
