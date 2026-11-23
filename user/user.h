@@ -51,3 +51,11 @@ void *malloc(uint);
 void free(void *);
 
 int chmod(const char *, int);
+
+struct audit_event {
+  int pid;
+  int uid;
+  int operation;
+  int inum;
+};
+int auditread(struct audit_event *, int);

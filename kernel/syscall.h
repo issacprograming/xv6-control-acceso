@@ -24,3 +24,4 @@
 #define SYS_getuid 23
 
 #define SYS_chmod 24
+#define SYS_auditread 27

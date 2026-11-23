@@ -46,3 +46,4 @@ entry("sync");
 entry("getuid");
 
 entry("chmod");
+entry("auditread");

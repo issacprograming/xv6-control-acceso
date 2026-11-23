@@ -105,6 +105,7 @@ extern uint64 sys_close(void);
 extern uint64 sys_sync(void);
 extern uint64 sys_getuid(void);
 extern uint64 sys_chmod(void);
+extern uint64 sys_auditread(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -134,6 +135,7 @@ static uint64 (*syscalls[])(void) = {
   [SYS_sync]    = sys_sync,
   [SYS_getuid]  = sys_getuid,
   [SYS_chmod]   = sys_chmod,
+  [SYS_auditread] = sys_auditread,
   // clang-format on
 };
 

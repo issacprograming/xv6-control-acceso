@@ -6,6 +6,8 @@
 #include "proc.h"
 #include "defs.h"
 #include "elf.h"
+#include "permissions.h"
+#include "audit.h"
 
 static int loadseg(pde_t *, uint64, struct inode *, uint, uint);
 
@@ -44,6 +46,12 @@ kexec(char *path, char **argv)
     return -1;
   }
   ilock(ip);
+
+  if (ip->type != T_DEVICE && check_access(ip, PERM_X, AUDIT_EXEC) < 0) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
 
   // Read the ELF header.
   if (readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
