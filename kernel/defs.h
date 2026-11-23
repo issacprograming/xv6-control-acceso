@@ -21,10 +21,13 @@ void            bunpin(struct buf*);
 // console.c
 void            consoleinit(void);
 void            consoleintr(int);
+void            consolesession(int);
+int             consolesecret(uint64);
 void            consputc(int);
 
 // exec.c
 int             kexec(char*, char**);
+int             kbootexec(void);
 
 // file.c
 struct file*    filealloc(void);
@@ -82,6 +85,7 @@ void            printkinit(void);
 int             cpuid(void);
 void            kexit(int);
 int             kfork(void);
+int             kstartsession(void);
 int             growproc(int);
 void            proc_mapstacks(pagetable_t);
 pagetable_t     proc_pagetable(struct proc *);

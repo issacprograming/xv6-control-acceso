@@ -44,3 +44,6 @@ entry("pause");
 entry("uptime");
 entry("sync");
 entry("getuid");
+entry("startsession");
+entry("readsecret");
+entry("authenticate");

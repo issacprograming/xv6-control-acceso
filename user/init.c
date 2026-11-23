@@ -6,10 +6,11 @@
 #include "kernel/sleeplock.h"
 #include "kernel/fs.h"
 #include "kernel/file.h"
+#include "kernel/auth.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
 
-char *argv[] = {"sh", 0};
+void login(void) __attribute__((noreturn));
 
 int
 main(void)
@@ -24,24 +25,23 @@ main(void)
   dup(0); // stderr
 
   for (;;) {
-    printf("init: starting sh\n");
-    pid = fork();
+    pid = startsession();
     if (pid < 0) {
-      printf("init: fork failed\n");
-      exit(1);
+      fprintf(2, "init: no se pudo iniciar la sesion\n");
+      if (pid == STARTSESSION_DENIED)
+        exit(1);
+      pause(10);
+      continue;
     }
-    if (pid == 0) {
-      exec("sh", argv);
-      printf("init: exec sh failed\n");
-      exit(1);
-    }
+    if (pid == 0)
+      login();
 
     for (;;) {
-      // this call to wait() returns if the shell exits,
+      // this call to wait() returns if the session exits,
       // or if a parentless process exits.
       wpid = wait((int *)0);
       if (wpid == pid) {
-        // the shell exited; restart it.
+        // The session ended; start a new login.
         break;
       } else if (wpid < 0) {
         printf("init: wait returned an error\n");

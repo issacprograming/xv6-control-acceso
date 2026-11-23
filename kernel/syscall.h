@@ -22,3 +22,6 @@
 #define SYS_close  21
 #define SYS_sync   22
 #define SYS_getuid 23
+#define SYS_startsession 24
+#define SYS_readsecret 25
+#define SYS_authenticate 26

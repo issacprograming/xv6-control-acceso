@@ -115,3 +115,18 @@ getuid:
  li a7, SYS_getuid
  ecall
  ret
+.global startsession
+startsession:
+ li a7, SYS_startsession
+ ecall
+ ret
+.global readsecret
+readsecret:
+ li a7, SYS_readsecret
+ ecall
+ ret
+.global authenticate
+authenticate:
+ li a7, SYS_authenticate
+ ecall
+ ret

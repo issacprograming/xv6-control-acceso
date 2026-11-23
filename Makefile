@@ -18,6 +18,7 @@ OBJS = \
   $K/trap.o \
   $K/syscall.o \
   $K/sysproc.o \
+  $K/auth.o \
   $K/bio.o \
   $K/fs.o \
   $K/log.o \
@@ -25,6 +26,7 @@ OBJS = \
   $K/file.o \
   $K/pipe.o \
   $K/exec.o \
+  $K/session_programs.o \
   $K/sysfile.o \
   $K/kernelvec.o \
   $K/plic.o \
@@ -152,6 +154,27 @@ UPROGS=\
 	$U/_sync\
 	$U/_uidtest\
 	$U/_whoami\
+
+$U/_init: $U/init.o $U/login.o $(ULIB) $U/user.ld
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $U/init.o $U/login.o $(ULIB)
+	$(OBJDUMP) -S $@ > $U/init.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/init.sym
+
+# Root runs the build-time programs while disk executables remain writable.
+$K/session_programs.o: $(UPROGS) Makefile
+	{ \
+	  printf '%s\n' '.section .rodata' '.balign 8' '.global session_programs' 'session_programs:'; \
+	  for program in $(UPROGS); do \
+	    name=$${program##*/_}; \
+	    printf '.dword name_%s, image_%s, end_%s - image_%s\n' "$$name" "$$name" "$$name" "$$name"; \
+	  done; \
+	  printf '%s\n' '.dword 0, 0, 0'; \
+	  for program in $(UPROGS); do \
+	    name=$${program##*/_}; \
+	    printf 'name_%s: .asciz "%s"\nimage_%s: .incbin "%s"\nend_%s:\n' \
+	      "$$name" "$$name" "$$name" "$$program" "$$name"; \
+	  done; \
+	} | $(CC) -march=rv64gc -x assembler -c -o $@ -
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

@@ -5,6 +5,10 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "uid.h"
+#include "auth.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
 #include "defs.h"
 
 struct cpu cpus[NCPU];
@@ -125,6 +129,9 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->uid = UID_UNAUTH;
+  p->session = 0;
+  p->session_manager = 0;
+  p->login_state = LOGIN_NONE;
   p->state = USED;
 
   // Allocate a trapframe page.
@@ -166,6 +173,9 @@ freeproc(struct proc *p)
   p->sz = 0;
   p->pid = 0;
   p->uid = UID_UNAUTH;
+  p->session = 0;
+  p->session_manager = 0;
+  p->login_state = LOGIN_NONE;
   p->name[0] = 0;
   p->chan = 0;
   p->killed = 0;
@@ -225,6 +235,7 @@ userinit(void)
 
   p = allocproc();
   initproc = p;
+  p->session_manager = 1;
 
   p->cwd = namei("/");
 
@@ -258,8 +269,8 @@ growproc(int n)
 
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
-int
-kfork(void)
+static int
+forkproc(int login)
 {
   int i, pid;
   struct proc *np;
@@ -278,6 +289,9 @@ kfork(void)
   }
   np->sz = p->sz;
   np->uid = p->uid;
+  np->session = login ? np->pid : p->session;
+  if (login)
+    np->login_state = LOGIN_PENDING;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -301,11 +315,38 @@ kfork(void)
   np->parent = p;
   release(&wait_lock);
 
+  if (login)
+    consolesession(pid);
+
   acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
 
   return pid;
+}
+
+int
+kfork(void)
+{
+  return forkproc(0);
+}
+
+int
+kstartsession(void)
+{
+  struct proc *p = myproc();
+
+  if (!p->session_manager || p->uid != UID_UNAUTH)
+    return STARTSESSION_DENIED;
+
+  // Verify that the inherited standard descriptors point at the console.
+  for (int fd = 0; fd < 3; fd++) {
+    struct file *f = p->ofile[fd];
+    if (!f || f->type != FD_DEVICE || f->major != CONSOLE ||
+        (fd == 0 ? !f->readable : !f->writable))
+      return STARTSESSION_DENIED;
+  }
+  return forkproc(1);
 }
 
 // Pass p's abandoned children to init.
@@ -333,6 +374,9 @@ kexit(int status)
 
   if (p == initproc)
     panic("init exiting");
+
+  if (p->session == p->pid)
+    consolesession(0);
 
   // Close all open files.
   for (int fd = 0; fd < NOFILE; fd++) {
@@ -534,7 +578,7 @@ forkret(void)
 
     // We can invoke kexec() now that file system is initialized.
     // Put the return value (argc) of kexec into a0.
-    p->trapframe->a0 = kexec("/init", (char *[]){"/init", 0});
+    p->trapframe->a0 = kbootexec();
     if (p->trapframe->a0 == -1) {
       panic("exec");
     }
@@ -606,10 +650,15 @@ int
 kkill(int pid)
 {
   struct proc *p;
+  int session = myproc()->session;
 
   for (p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
     if (p->pid == pid) {
+      if (p == initproc || p->session != session) {
+        release(&p->lock);
+        return -1;
+      }
       p->killed = 1;
       if (p->state == SLEEPING) {
         // Wake process from sleep().

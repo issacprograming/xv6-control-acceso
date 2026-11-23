@@ -6,8 +6,46 @@
 #include "proc.h"
 #include "defs.h"
 #include "elf.h"
+#include "auth.h"
+#include "uid.h"
 
-static int loadseg(pde_t *, uint64, struct inode *, uint, uint);
+struct execimage {
+  const char *name;
+  const char *data;
+  uint64 size;
+};
+
+extern const struct execimage session_programs[];
+
+static int loadseg(pde_t *, uint64, struct inode *, const struct execimage *,
+                   uint64, uint64);
+
+static const struct execimage *
+sessionimage(const char *path)
+{
+  if (*path == '/')
+    path++;
+  for (const struct execimage *image = session_programs; image->name; image++) {
+    if (strncmp(path, image->name, strlen(image->name) + 1) == 0)
+      return image;
+  }
+  return 0;
+}
+
+static int
+execread(struct inode *ip, const struct execimage *image, uint64 dst,
+         uint64 off, uint n)
+{
+  if (image) {
+    if (off > image->size || n > image->size - off)
+      return -1;
+    memmove((void *)dst, image->data + off, n);
+    return n;
+  }
+  if (off > (uint)-1)
+    return -1;
+  return readi(ip, 0, dst, off, n);
+}
 
 // map ELF permissions to PTE permission bits.
 int
@@ -24,29 +62,30 @@ flags2perm(int flags)
 //
 // the implementation of the exec() system call
 //
-int
-kexec(char *path, char **argv)
+static int
+loadexec(char *path, char **argv, const struct execimage *image)
 {
   char *s, *last;
-  int i, off;
+  int i;
+  uint64 off;
   uint64 argc, sz = 0, sp, ustack[MAXARG], stackbase;
   struct elfhdr elf;
-  struct inode *ip;
+  struct inode *ip = 0;
   struct proghdr ph;
   pagetable_t pagetable = 0, oldpagetable;
   struct proc *p = myproc();
 
-  begin_op();
-
-  // Open the executable file.
-  if ((ip = namei(path)) == 0) {
-    end_op();
-    return -1;
+  if (!image) {
+    begin_op();
+    if ((ip = namei(path)) == 0) {
+      end_op();
+      return -1;
+    }
+    ilock(ip);
   }
-  ilock(ip);
 
   // Read the ELF header.
-  if (readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
+  if (execread(ip, image, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
     goto bad;
 
   // Is this really an ELF file?
@@ -58,7 +97,7 @@ kexec(char *path, char **argv)
 
   // Load program into memory.
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-    if (readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
+    if (execread(ip, image, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
       goto bad;
     if (ph.type != ELF_PROG_LOAD)
       continue;
@@ -73,12 +112,14 @@ kexec(char *path, char **argv)
                         flags2perm(ph.flags))) == 0)
       goto bad;
     sz = sz1;
-    if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
+    if (loadseg(pagetable, ph.vaddr, ip, image, ph.off, ph.filesz) < 0)
       goto bad;
   }
-  iunlockput(ip);
-  end_op();
-  ip = 0;
+  if (ip) {
+    iunlockput(ip);
+    end_op();
+    ip = 0;
+  }
 
   p = myproc();
   uint64 oldsz = p->sz;
@@ -135,6 +176,7 @@ kexec(char *path, char **argv)
   p->sz = sz;
   p->trapframe->epc = elf.entry; // initial program counter = ulib.c:start()
   p->trapframe->sp = sp;         // initial stack pointer
+  p->login_state = LOGIN_NONE;
   proc_freepagetable(oldpagetable, oldsz);
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
@@ -149,15 +191,45 @@ bad:
   return -1;
 }
 
+int
+kbootexec(void)
+{
+  const struct execimage *image = sessionimage("/init");
+  if (!image)
+    return -1;
+  return loadexec("/init", (char *[]){"/init", 0}, image);
+}
+
+int
+kexec(char *path, char **argv)
+{
+  struct proc *p = myproc();
+  const struct execimage *image = 0;
+
+  if (p->session_manager || p->login_state == LOGIN_PENDING)
+    return -1;
+
+  if (p->login_state == LOGIN_VERIFIED && strncmp(path, "/sh", 4) != 0)
+    return -1;
+
+  if (p->login_state == LOGIN_VERIFIED || p->uid == UID_ROOT) {
+    image = sessionimage(path);
+    if (!image)
+      return -1;
+  }
+  return loadexec(path, argv, image);
+}
+
 // Load an ELF program segment into pagetable at virtual address va.
 // va must be page-aligned
 // and the pages from va to va+sz must already be mapped.
 // Returns 0 on success, -1 on failure.
 static int
-loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset,
-        uint sz)
+loadseg(pagetable_t pagetable, uint64 va, struct inode *ip,
+        const struct execimage *image, uint64 offset, uint64 sz)
 {
-  uint i, n;
+  uint64 i;
+  uint n;
   uint64 pa;
 
   for (i = 0; i < sz; i += PGSIZE) {
@@ -168,7 +240,8 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset,
       n = sz - i;
     else
       n = PGSIZE;
-    if (readi(ip, 0, (uint64)pa, offset + i, n) != n)
+    if (offset + i < offset ||
+        execread(ip, image, (uint64)pa, offset + i, n) != n)
       return -1;
   }
 
