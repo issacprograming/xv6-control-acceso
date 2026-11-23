@@ -1,0 +1,95 @@
+
+xv6 kernel is booting
+
+init: starting sh
+$ 
+[HOST DEBUGGER: shell UID=1002; login not yet implemented]
+permtest p3
+PASS: one test stage supplied
+permtest stage=p3 uid=1002
+PASS: Samir identity
+PASS: P3 create own file
+PASS: P3 write own file
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+PASS: P3 private mode
+PASS: P3 read own private file
+PASS: stat path
+metadata uid=1002 mode=0600
+PASS: owner and persistent mode
+DONE: p3
+$ permtest p5-owner
+PASS: one test stage supplied
+permtest stage=p5-owner uid=1002
+PASS: owner identity
+PASS: P5 searchable parent for other UID
+PASS: P5 owner chmod allowed
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+PASS: P5 reject negative mode
+PASS: P5 reject special bits
+PASS: P5 reject independent group rights
+PASS: P5 reject missing path
+PASS: P5 reject invalid pointer
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+DONE: p5-owner
+$ 
+[HOST DEBUGGER: shell UID=1001; login not yet implemented]
+permtest p5-other
+PASS: one test stage supplied
+permtest stage=p5-other uid=1001
+PASS: non-owner identity
+PASS: P5 non-owner chmod denied
+PASS: P5 other UID reads mode 0644
+DONE: p5-other
+$ 
+[HOST DEBUGGER: shell UID=0; login not yet implemented]
+permtest p5-root
+PASS: one test stage supplied
+permtest stage=p5-root uid=0
+PASS: root identity
+PASS: stat path
+metadata uid=1002 mode=0644
+PASS: owner and persistent mode
+PASS: P5 root chmod allowed
+PASS: stat path
+metadata uid=1002 mode=0600
+PASS: owner and persistent mode
+DONE: p5-root
+$ ls -l /home/samir/p3.txt
+p3.txt         rw---- uid=1002 mode=0600 ino=31 size=6
+$ 
+[HOST DEBUGGER: shell UID=1002; login not yet implemented]
+permtest p7-setup
+PASS: one test stage supplied
+permtest stage=p7-setup uid=1002
+PASS: owner identity
+PASS: P7 restricted directory
+PASS: P7 victim created
+DONE: p7-setup
+$ permtest p7-owner
+PASS: one test stage supplied
+permtest stage=p7-owner uid=1002
+PASS: owner identity
+PASS: P7 owner unlink allowed
+DONE: p7-owner
+$ permtest p7-setup
+PASS: one test stage supplied
+permtest stage=p7-setup uid=1002
+PASS: owner identity
+PASS: P7 restricted directory
+PASS: P7 victim created
+DONE: p7-setup
+$ 
+[HOST DEBUGGER: shell UID=1001; login not yet implemented]
+permtest p7-other
+PASS: one test stage supplied
+permtest stage=p7-other uid=1001
+PASS: non-owner identity
+FAIL: P7 unlink protected file denied
+$ sync
+$ 
