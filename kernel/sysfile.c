@@ -14,6 +14,7 @@
 #include "fs.h"
 #include "sleeplock.h"
 #include "file.h"
+#include "permissions.h"
 #include "fcntl.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
@@ -526,5 +527,35 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+// Change inode permissions atomically. Lock protects both the ownership check
+// and the update; begin/end_op persist the change through xv6's journal.
+uint64
+sys_chmod(void)
+{
+  char path[MAXPATH];
+  int mode, uid = get_current_uid();
+  struct inode *ip;
+
+  argint(1, &mode);
+  if (argstr(0, path, MAXPATH) < 0 || !valid_file_mode(mode) || uid < 0)
+    return -1;
+  begin_op();
+  if ((ip = namei(path)) == 0) {
+    end_op();
+    return -1;
+  }
+  ilock(ip);
+  if (uid != ROOT_UID && uid != ip->uid) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  ip->mode = mode;
+  iupdate(ip);
+  iunlockput(ip);
+  end_op();
   return 0;
 }

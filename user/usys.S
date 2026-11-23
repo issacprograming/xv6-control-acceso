@@ -115,3 +115,8 @@ getuid:
  li a7, SYS_getuid
  ecall
  ret
+.global chmod
+chmod:
+ li a7, SYS_chmod
+ ecall
+ ret
