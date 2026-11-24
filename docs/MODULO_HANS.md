@@ -1,4 +1,4 @@
-# Módulo de Hans: autorización y auditoría
+# Módulo de autorización y auditoría
 
 **Responsable:** Hans  
 **Área:** control de acceso, validación de permisos y registro de denegaciones  
